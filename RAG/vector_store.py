@@ -48,13 +48,16 @@ class VectorStore:
             for item in chunked_data
         ]
         
-        # Add to collection
-        self.collection.add(
-            ids=ids,
-            embeddings=embeddings,
-            metadatas=metadatas,
-            documents=sentences # Storing sentence also in document field for easy retrieval
-        )
+        # Add to collection in smaller batches to avoid ChromaDB limits (e.g., 5000)
+        batch_limit = 5000
+        for i in range(0, len(ids), batch_limit):
+            end = min(i + batch_limit, len(ids))
+            self.collection.add(
+                ids=ids[i:end],
+                embeddings=embeddings[i:end],
+                metadatas=metadatas[i:end],
+                documents=sentences[i:end]
+            )
 
     def search(self, query: str, product_id: str = None, top_k: int = 5):
         """Search the collection with a natural language query."""
@@ -72,6 +75,14 @@ class VectorStore:
             query_embeddings=query_embedding,
             n_results=top_k,
             where=where_filter
+        )
+        return results
+
+    def get_all_for_product(self, product_id: str):
+        """Fetches all indexed sentences and metadata for a specific product."""
+        results = self.collection.get(
+            where={"product_id": product_id},
+            include=["documents", "metadatas"]
         )
         return results
 

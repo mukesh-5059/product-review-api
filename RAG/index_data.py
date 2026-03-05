@@ -5,7 +5,7 @@ import time
 import os
 
 def main():
-    print("🚀 Starting Fast Indexing Test (1,000 reviews with spaCy)...")
+    print("🚀 Starting Fast Indexing Test (10,000 reviews with spaCy)...")
     start_time = time.time()
     
     # Calculate paths
@@ -23,9 +23,9 @@ def main():
     # 2. Clear existing data to ensure new preprocessing is used
     vs.clear_collection()
     
-    # 3. Process exactly 1,000 reviews
-    limit = 1000
-    batch_size = 500 # 2 batches total
+    # 3. Process exactly 10,000 reviews
+    limit = 10000
+    batch_size = 2500 # 4 batches total
     total_indexed = 0
     
     print(f"Reading first {limit} reviews from {data_path}...")
