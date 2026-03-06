@@ -44,7 +44,7 @@ product-review-api/
 ```
 ## Installation and Setup
 
-1. Create and activate a virtual environment:
+1. Create and activate a virtual environment (Python 3.12+):
    python -m venv .venv
    source .venv/bin/activate
 
@@ -58,6 +58,9 @@ product-review-api/
 
 4. Index the dataset:
    python RAG/index_data.py
+
+## Dataset used
+https://www.kaggle.com/datasets/saurav9786/amazon-product-reviews
 
 ## Running the Application
 
