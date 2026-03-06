@@ -2,70 +2,78 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .insight_engine import InsightEngine
 import uvicorn
+import logging
+
+import os
+
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
+
+# Define format
+log_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+# File Handler
+file_handler = logging.FileHandler("logs/rag_engine.log")
+file_handler.setFormatter(log_format)
+
+# Console Handler
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(log_format)
+
+# Root Logger Setup
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.addHandler(file_handler)
+root_logger.addHandler(stream_handler)
+
+logger = logging.getLogger(__name__)
+logger.info("Logging initialized - writing to logs/rag_engine.log")
 
 # 1. Initialize FastAPI
 app = FastAPI(
-    title="Product Review",
-    description="Analyzes Amazon reviews to extract aspects, sentiment, and evidence.",
+    title="RAG Engine API",
+    description="Analyzes Amazon reviews using RAG pipeline.",
     version="1.0.0"
 )
 
-# 2. Add CORS Middleware (Crucial for Team Access)
+# 2. Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allows your teammate to connect from any URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # 3. Initialize the Engine
-# This will load the VectorStore and LLM Client once on startup
-engine = InsightEngine()
+try:
+    engine = InsightEngine()
+    logger.info("RAG Engine initialized.")
+except Exception as e:
+    logger.critical(f"Failed to start RAG Engine: {e}")
+    raise
 
 @app.get("/")
 def read_root():
-    return {
-        "status": "ONLINE",
-        "message": "Product Review Insights API is running.",
-        "usage": "GET /insights/{product_id}"
-    }
+    return {"status": "ONLINE", "server": "RAG_CORE"}
 
 @app.get("/items/{product_id}")
 async def get_insights(product_id: str):
     """
-    Fetches full RAG insights for a specific product.
-    Returns: JSON with summary, aspects, sentiment, and evidence.
+    Core RAG analysis endpoint.
     """
     try:
-        print(f"Received request for Product ID: {product_id}")
-        
-        # Run the full pipeline
+        logger.info(f"📥 Analysis request for: {product_id}")
         insights = engine.get_full_insights(product_id)
         
-        # Handle Task 5 "Not enough data" requirement
         if "error" in insights:
-            if "Not enough data" in insights["error"]:
-                return {
-                    "product_id": product_id,
-                    "status": "INSUFFICIENT_DATA",
-                    "message": insights["error"],
-                    "top_aspects": [],
-                    "summary": "Not enough reviews available for analysis.",
-                    "confidence": 0.0
-                }
-            # Handle other errors (API failures, etc.)
-            raise HTTPException(status_code=500, detail=insights["error"])
+            logger.warning(f"⚠️ Issue processing {product_id}: {insights['error']}")
         
-        # Successful result
-        insights["status"] = "SUCCESS"
         return insights
-
     except Exception as e:
-        print(f"Error processing {product_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Critical error in RAG Engine for {product_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal RAG processing error.")
 
-# 4. To run: python -m RAG.main
 if __name__ == "__main__":
-    print("Starting Server on http://0.0.0.0:8000")
+    logger.info("🚀 Starting RAG Core Server on port 8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
