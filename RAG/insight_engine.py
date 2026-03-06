@@ -40,7 +40,7 @@ class InsightEngine:
 
     def get_full_insights(self, product_id: str):
         """
-        Full Task 5 Pipeline with 'Insufficient Data' handling and logging.
+        Full Task 5 Pipeline with forced evidence retrieval.
         """
         try:
             logger.info(f"Processing insights for Product ID: {product_id}")
@@ -62,14 +62,19 @@ class InsightEngine:
             if isinstance(aspects, dict) and "error" in aspects:
                 return aspects
 
+            # --- DYNAMIC CONFIDENCE CALCULATION (Factor 1: Volume) ---
+            # We normalize volume: 50+ sentences = 1.0 confidence contribution
+            volume_score = min(1.0, len(sentences) / 50)
+
             results = {
                 "product_id": product_id,
                 "top_aspects": [],
                 "summary": "",
-                "confidence": 0.85
+                "confidence": 0.0 # Will be updated at the end
             }
 
             all_evidence_for_summary = []
+            all_similarity_scores = []
 
             for aspect in aspects:
                 search_results = self.vs.search(aspect, product_id=product_id, top_k=50)
@@ -80,26 +85,27 @@ class InsightEngine:
                 
                 pros_evidence = []
                 cons_evidence = []
-                neutral_evidence = []
+                all_raw_matches = []
                 
                 RELEVANCE_THRESHOLD = 0.80 
                 
                 for i in range(len(docs)):
-                    if distances[i] > RELEVANCE_THRESHOLD:
-                        continue
-                    
                     text = docs[i].strip()
                     rating = metas[i].get('rating', 0)
+                    sim_score = 1.0 - distances[i]
                     
-                    if any(e == text for e in pros_evidence + cons_evidence + neutral_evidence):
+                    if text in all_raw_matches:
                         continue
+                    
+                    if len(all_raw_matches) < 3:
+                        all_raw_matches.append(text)
+                        all_similarity_scores.append(sim_score)
 
-                    if rating >= 4:
-                        pros_evidence.append(text)
-                    elif rating <= 2:
-                        cons_evidence.append(text)
-                    else:
-                        neutral_evidence.append(text)
+                    if distances[i] <= RELEVANCE_THRESHOLD:
+                        if rating >= 4:
+                            pros_evidence.append(text)
+                        elif rating <= 2:
+                            cons_evidence.append(text)
 
                 total_pro_con = len(pros_evidence) + len(cons_evidence)
                 
@@ -118,15 +124,31 @@ class InsightEngine:
                     "sentiment_score": round(sentiment_score, 2),
                     "pros_evidence": pros_evidence[:5],
                     "cons_evidence": cons_evidence[:5],
-                    "reference_evidence": neutral_evidence[:3] if category == "Insufficient Data" else []
+                    "reference_evidence": all_raw_matches[:1] if category == "Insufficient Data" else []
                 }
                 
                 results["top_aspects"].append(aspect_data)
-                all_evidence_for_summary.extend(pros_evidence[:2] + cons_evidence[:2])
+                
+                if pros_evidence: all_evidence_for_summary.extend(pros_evidence[:2])
+                if cons_evidence: all_evidence_for_summary.extend(cons_evidence[:2])
+                if not (pros_evidence or cons_evidence):
+                    all_evidence_for_summary.extend(all_raw_matches[:1])
 
-            # Step 5: Final Summary
-            if all_evidence_for_summary:
-                summary_text = "\n".join(all_evidence_for_summary[:15])
+            # --- FINAL CONFIDENCE CALCULATION ---
+            # Factor 2: Retrieval Similarity (Average of all best matches)
+            avg_sim = np.mean(all_similarity_scores) if all_similarity_scores else 0.0
+            
+            # Combine: 40% Volume + 60% Similarity
+            final_conf = (volume_score * 0.4) + (avg_sim * 0.6)
+            results["confidence"] = round(final_conf, 2)
+
+            # Step 5: Final Summary (Only if we have categorized sentiment)
+            # Old logic: if all_evidence_for_summary:
+            # We now only summarize if there's at least one categorized aspect (Pro/Con/Mixed)
+            has_real_insights = any(a['category'] in ["Pro", "Con", "Mixed"] for a in results["top_aspects"])
+            
+            if has_real_insights and all_evidence_for_summary:
+                summary_text = "\n".join(list(set(all_evidence_for_summary))[:15])
                 prompt = f"Based on these specific review points, provide a concise 2-sentence summary of this product's strengths and weaknesses.\n\nPoints:\n{summary_text}"
                 try:
                     response = self.client.chat.completions.create(
@@ -137,6 +159,9 @@ class InsightEngine:
                 except Exception as e:
                     logger.error(f"LLM Summary generation failed: {e}")
                     results["summary"] = "Summary unavailable."
+            else:
+                logger.info(f"Skipping summary for {product_id} due to insufficient categorized insights.")
+                results["summary"] = "Not enough categorized feedback to generate a meaningful summary."
 
             return results
         except Exception as e:

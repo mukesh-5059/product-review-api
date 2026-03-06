@@ -1,104 +1,94 @@
-# Product Review Insights API (RAG Engine)
+# Product Review Insights API
 
-A high-performance RAG (Retrieval-Augmented Generation) pipeline that transforms thousands of raw Amazon reviews into structured, actionable insights. 
+This project implements Task 5 from the AI and Programming Hackathon Challenge. It provides a Retrieval-Augmented Generation (RAG) pipeline to extract aspects, sentiment, and supporting evidence from a dataset of Amazon product reviews.
 
-This project uses K-Means clustering to identify top themes, analyzes sentiment per aspect, and extracts supporting evidence using a hybrid local-vector/cloud-LLM architecture.
+## Implementation Details
 
-## Key Features
+The implementation follows the mandatory components specified in the challenge objectives:
 
-*   Intelligent Aspect Extraction: Uses K-Means clustering to summarize large review sets (up to 10k+) into representative themes before LLM processing.
-*   Hybrid Sentiment Engine: Categorizes aspects as Pro, Con, or Mixed based on real customer star-ratings metadata.
-*   Evidence Selection: Automatically retrieves multiple relevant supporting sentences for every insight, ensuring zero hallucinations.
-*   Dynamic Scaling: Automatically adjusts the depth of analysis based on the number of available reviews.
-*   Professional Dashboard: Interactive Streamlit interface with a split-screen layout for summaries and categorized insights.
-
-## Tech Stack
-
-- NLP: spaCy (Sentence Segmentation)
-- Vector DB: ChromaDB (Persistent Storage)
-- Embeddings: BAAI/bge-small-en-v1.5
-- Intelligence: OpenRouter (GPT-4o-mini)
-- Backend: FastAPI & Uvicorn
-- Frontend: Streamlit
-- Analytics: scikit-learn (K-Means Clustering)
+1. Text Preprocessing: Reviews are cleaned of HTML tags and normalized. Sentence segmentation is performed using the spaCy en_core_web_sm model to ensure semantic boundaries are respected for the embedding process.
+2. Aspect Extraction: A hybrid approach is used. First, K-Means clustering (scikit-learn) groups similar review sentences. Second, an LLM (GPT-4o-mini) analyzes these clusters to identify the top 5-10 distinct aspects.
+3. Aspect Sentiment Analysis: Sentiment is calculated based on the metadata ratings (1-5 stars) associated with the retrieved sentences for each aspect. A score between 0.0 and 1.0 is generated based on the ratio of positive to negative reviews.
+4. Evidence Selection: Supporting evidence is retrieved using vector similarity search (ChromaDB) with a configurable relevance threshold. All evidence is verbatim from the dataset to prevent hallucination.
+5. API Validation: The system uses FastAPI for request handling, input validation, and error management. 
 
 ## Repository Structure
 
-```text
 product-review-api/
-├── main.py                     # Client-side API (Proxies requests to RAG Engine)
+├── main.py                     # Client Gateway API (Proxies requests to RAG Engine)
 ├── RAG/
 │   ├── main.py                 # Core RAG Server (Handles analysis logic)
-│   ├── insight_engine.py       # Insight Generation Logic (LLM + Evidence)
-│   ├── cluster_aspect_extractor.py # K-Means Theme Discovery
-│   ├── vector_store.py         # ChromaDB Management & Sub-batching
-│   ├── data_manager.py         # spaCy Preprocessing & Sentence Splitting
-│   ├── index_data.py           # Script to populate the Vector Database
-│   └── search_reviews.py       # CLI tool for manual review searching
+│   ├── insight_engine.py       # Core Logic (LLM, Sentiment, and Evidence Selection)
+│   ├── cluster_aspect_extractor.py # K-Means implementation for theme discovery
+│   ├── vector_store.py         # ChromaDB management and sub-batching logic
+│   ├── data_manager.py         # spaCy preprocessing and data loading
+│   └── index_data.py           # Script to populate the vector database
 ├── front_end/
-│   └── dashboard.py            # Streamlit Dashboard UI
+│   └── dashboard.py            # Streamlit-based user interface
 ├── data/
-│   ├── Reviews.csv             # Raw Dataset (Input)
-│   └── Clean_reviews.csv       # Preprocessed Data (Punctuation-preserved)
-├── k.py                        # Data Standardization & Cleaning Script
-└── .env                        # Configuration (OPENROUTER_API_KEY)
-```
+│   └── Clean_reviews.csv       # Preprocessed dataset
+├── logs/                       # Server logs (gateway.log and rag_engine.log)
+├── requirements.txt            # Project dependencies
+└── .env                        # Configuration for OpenRouter API key
 
-## Installation & Setup
+## Installation and Setup
 
-1. Setup Environment:
-   ```bash
+1. Create and activate a virtual environment:
    python -m venv .venv
-   source .venv/bin/activate  # Linux/Mac
+   source .venv/bin/activate
+
+2. Install dependencies:
    pip install -r requirements.txt
    python -m spacy download en_core_web_sm
-   ```
 
-2. Configure API Key:
-   Create a .env file in the root:
-   ```text
-   OPENROUTER_API_KEY=your_openrouter_key_here
-   ```
+3. Configure environment variables:
+   Create a .env file in the root directory and add your key:
+   OPENROUTER_API_KEY=your_api_key_here
 
-3. Index the Data (Required before first run):
-   ```bash
-   python k.py
+4. Index the dataset:
    python RAG/index_data.py
-   ```
 
 ## Running the Application
 
-This system consists of two backend servers and one frontend dashboard.
+The system requires two backend servers and one frontend application.
 
-### 1. Start the RAG Engine (Core Server)
-```bash
-python -m RAG.main
-```
-*Default: http://localhost:8000*
+1. Start the RAG Engine (Core Server):
+   python -m RAG.main
+   (Runs on http://localhost:8000)
 
-### 2. Start the Client API (Gateway Server)
-```bash
-python main.py
-```
-*Default: http://localhost:8001*
+2. Start the Gateway API (Client Server):
+   python main.py
+   (Runs on http://localhost:8001)
 
-### 3. Start the Dashboard (Frontend)
-```bash
-streamlit run front_end/dashboard.py
-```
+3. Start the Dashboard (Frontend):
+   streamlit run front_end/dashboard.py
 
-## API Endpoints
+## API Documentation
 
-### 1. Client Gateway API (main.py)
-This is the primary entry point for the frontend. It proxies requests to the RAG engine.
-* **GET `/items/{item_id}`**: Retrieves the processed insights for a product.
-    * **Response**: A structured JSON containing `summary`, `top_aspects`, `status`, and `confidence`.
+### Get Product Insights
+Endpoint: GET /items/{item_id}
 
-### 2. RAG Engine API (RAG/main.py)
-The core analysis server.
-* **GET `/`**: Health check.
-* **GET `/items/{item_id}`**: Performs the actual RAG analysis (Clustering -> LLM -> Vector Search).
-* **Response**: Raw analysis data used by the Gateway.
+Sample Request:
+curl http://localhost:8001/items/B003VXFK44
 
-## License
-MIT License
+Sample Output:
+{
+  "product_id": "B003VXFK44",
+  "status": "SUCCESS",
+  "summary": "This product features a smooth flavor profile suitable for various tastes. However, there are noted issues with packaging labels and return policies.",
+  "top_aspects": [
+    {
+      "aspect": "Flavor Smoothness",
+      "category": "Pro",
+      "sentiment_score": 0.82,
+      "pros_evidence": ["The flavor is smooth and delightful."],
+      "cons_evidence": ["A bit too weak for my preference."]
+    }
+  ]
+}
+
+## Error Handling and Logging
+
+- Insufficient Data: If a product has fewer than 5 reviews, the API returns a status of INSUFFICIENT_DATA and refuses to generate a summary to avoid inaccurate results.
+- Logging: All internal processes, API requests, and errors are logged to the logs/ directory using Python's standard logging module. Both file and console handlers are implemented.
+- Robustness: The Gateway API includes timeouts and error handling for cases where the RAG Engine is unreachable or returns an error.
