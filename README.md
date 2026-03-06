@@ -73,8 +73,4 @@ Navigate to the frontend directory and follow its specific setup instructions, o
 
 * GET / - Health check and API status.
 
-* POST /reviews - Submit a new product review.
-
 * GET /reviews/{product_id} - Retrieve reviews for a specific product.
-
-* POST /ask - RAG-based query endpoint. Send a question about a product and receive an AI-generated answer.
