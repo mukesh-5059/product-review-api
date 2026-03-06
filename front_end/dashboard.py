@@ -88,29 +88,34 @@ if item_id:
         with right_col:
             st.subheader("Insights by Aspect")
             aspects = data.get("top_aspects", [])
-            for item in aspects:
-                cat = item.get("category", "Mixed")
-                label = cat if cat != "Insufficient Data" else "Insufficient Data"
 
-                with st.expander(f"{item['aspect']} ({label})"):
-                    if cat == "Pro": st.success("Positive Sentiment Pattern")
-                    elif cat == "Con": st.error("Negative Sentiment Pattern")
-                    elif cat == "Mixed": st.warning("Mixed or Neutral Sentiment Pattern")
-                    else: st.info("Insufficient Data for Sentiment Categorization")
+            if not aspects:
+                st.info("No specific product aspects could be identified from the available reviews.")
+            else:
+                for item in aspects:
+                    cat = item.get("category", "Mixed")
+                    label = cat if cat != "Insufficient Data" else "Insufficient Data"
 
-                    p_col, c_col = st.columns(2)
-                    with p_col:
-                        if item.get("pros_evidence"):
-                            st.markdown("**Positive Points:**")
-                            for p in item["pros_evidence"]: st.write(f"- {p}")
-                    with c_col:
-                        if item.get("cons_evidence"):
-                            st.markdown("**Criticisms:**")
-                            for c in item["cons_evidence"]: st.write(f"- {c}")
-                    
-                    if item.get("reference_evidence"):
-                        st.divider()
-                        st.markdown("**Reference Points:**")
-                        for r in item["reference_evidence"]: st.write(f"- {r}")
+                    with st.expander(f"{item['aspect']} ({label})"):
+                        if cat == "Pro": st.success("Positive Sentiment Pattern")
+                        elif cat == "Con": st.error("Negative Sentiment Pattern")
+                        elif cat == "Mixed": st.warning("Mixed or Neutral Sentiment Pattern")
+                        else: st.info("Insufficient Data for Sentiment Categorization")
+
+                        p_col, c_col = st.columns(2)
+                        with p_col:
+                            if item.get("pros_evidence"):
+                                st.markdown("**Positive Points:**")
+                                for p in item["pros_evidence"]: st.write(f"- {p}")
+                        with c_col:
+                            if item.get("cons_evidence"):
+                                st.markdown("**Criticisms:**")
+                                for c in item["cons_evidence"]: st.write(f"- {c}")
+
+                        if item.get("reference_evidence"):
+                            st.divider()
+                            st.markdown("**Reference Points:**")
+                            for r in item["reference_evidence"]:
+                                st.write(f"- {r}")
 else:
     st.info("Please select a product from the searchable dropdown above to view its analysis.")
