@@ -24,7 +24,7 @@ The implementation follows the mandatory components specified in the challenge o
 ![Product Selection](assets/Screenshot%202026-03-06%20103140.png)
 
 ## Repository Structure
-
+```
 product-review-api/
 ├── main.py                     # Client Gateway API (Proxies requests to RAG Engine)
 ├── RAG/
@@ -41,7 +41,7 @@ product-review-api/
 ├── logs/                       # Server logs (gateway.log and rag_engine.log)
 ├── requirements.txt            # Project dependencies
 └── .env                        # Configuration for OpenRouter API key
-
+```
 ## Installation and Setup
 
 1. Create and activate a virtual environment:
