@@ -12,6 +12,17 @@ The implementation follows the mandatory components specified in the challenge o
 4. Evidence Selection: Supporting evidence is retrieved using vector similarity search (ChromaDB) with a configurable relevance threshold. All evidence is verbatim from the dataset to prevent hallucination.
 5. API Validation: The system uses FastAPI for request handling, input validation, and error management. 
 
+## Application Screenshots
+
+### Dashboard Overview
+![Dashboard Overview](assets/image.png)
+
+### Detailed Insight Analysis
+![Insights Analysis](assets/Screenshot%202026-03-06%20103043.png)
+
+### Product Selection and Summary
+![Product Selection](assets/Screenshot%202026-03-06%20103140.png)
+
 ## Repository Structure
 
 product-review-api/
@@ -65,7 +76,11 @@ The system requires two backend servers and one frontend application.
 
 ## API Documentation
 
-### Get Product Insights
+### 1. Get Product Catalog
+Endpoint: GET /products
+Returns a dynamic list of all products in the database with their review counts.
+
+### 2. Get Product Insights
 Endpoint: GET /items/{item_id}
 
 Sample Request:
@@ -75,20 +90,24 @@ Sample Output:
 {
   "product_id": "B003VXFK44",
   "status": "SUCCESS",
-  "summary": "This product features a smooth flavor profile suitable for various tastes. However, there are noted issues with packaging labels and return policies.",
+  "summary": "This product features a smooth flavor profile suitable for various tastes...",
+  "confidence": 0.85,
   "top_aspects": [
     {
       "aspect": "Flavor Smoothness",
       "category": "Pro",
       "sentiment_score": 0.82,
       "pros_evidence": ["The flavor is smooth and delightful."],
-      "cons_evidence": ["A bit too weak for my preference."]
+      "cons_evidence": ["A bit too weak for my preference."],
+      "reference_evidence": []
     }
   ]
 }
 
 ## Error Handling and Logging
 
-- Insufficient Data: If a product has fewer than 5 reviews, the API returns a status of INSUFFICIENT_DATA and refuses to generate a summary to avoid inaccurate results.
-- Logging: All internal processes, API requests, and errors are logged to the logs/ directory using Python's standard logging module. Both file and console handlers are implemented.
-- Robustness: The Gateway API includes timeouts and error handling for cases where the RAG Engine is unreachable or returns an error.
+- Insufficient Data: 
+    - If a product has < 5 reviews, the API returns INSUFFICIENT_DATA and skips analysis.
+    - At the aspect level, if fewer than 3 reviews provide clear sentiment (1-2 or 4-5 stars), the aspect is labeled "Insufficient Data". In these cases, the system still returns the single best-matching review as "reference_evidence" to ensure transparency.
+- Dynamic Confidence: The system calculates a confidence score (0.0 to 1.0) based on a weighted mix of data volume (40%) and retrieval similarity (60%).
+- Logging: All internal processes, API requests, and errors are logged to the logs/ directory. Both file and console handlers are implemented for the RAG Engine and the Gateway API.
