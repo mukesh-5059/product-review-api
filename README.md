@@ -1,4 +1,4 @@
-# Product Review Insights API (TeamApp)
+# Product Review Insights API
 
 A high-performance RAG pipeline designed for intelligent product review analysis. Built with **Hybrid Clustering**, **LLM-based Aspect Extraction**, and **Vector Similarity Search**, this project transforms raw customer feedback into structured, actionable intelligence.
 
