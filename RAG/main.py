@@ -38,7 +38,7 @@ async def get_insights(product_id: str):
     Returns: JSON with summary, aspects, sentiment, and evidence.
     """
     try:
-        print(f"📥 Received request for Product ID: {product_id}")
+        print(f"Received request for Product ID: {product_id}")
         
         # Run the full pipeline
         insights = engine.get_full_insights(product_id)
@@ -62,10 +62,10 @@ async def get_insights(product_id: str):
         return insights
 
     except Exception as e:
-        print(f"❌ Error processing {product_id}: {str(e)}")
+        print(f"Error processing {product_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # 4. To run: python -m RAG.main
 if __name__ == "__main__":
-    print("🚀 Starting Server on http://0.0.0.0:8000")
+    print("Starting Server on http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)

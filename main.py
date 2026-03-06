@@ -5,7 +5,7 @@ import httpx
 import uvicorn
 
 # Configuration
-RAG_ENGINE_URL = "http://10.68.198.184:8000"
+RAG_ENGINE_URL = "http://172.16.44.58:8000"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -54,5 +54,5 @@ async def read_item(item_id: str):
 
 # Run this on port 8001 to keep port 8000 free for the RAG engine (if needed locally)
 if __name__ == "__main__":
-    print("🚀 Gateway API listening on http://0.0.0.0:8001")
+    print("Gateway API listening on http://0.0.0.0:8001")
     uvicorn.run(app, host="0.0.0.0", port=8001)
